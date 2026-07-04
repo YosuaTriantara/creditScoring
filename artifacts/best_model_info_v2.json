@@ -1,0 +1,10 @@
+{
+  "best_exp_id": "E6",
+  "config": {
+    "description": "ANN + Dropout + Class Weight",
+    "use_dropout": true,
+    "use_batchnorm": false,
+    "use_class_weight": true,
+    "use_smote": false
+  }
+}
