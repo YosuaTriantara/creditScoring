@@ -1,0 +1,12 @@
+{
+  "0": "Current",
+  "1": "Fully Paid",
+  "2": "Charged Off",
+  "3": "Late (31-120 days)",
+  "4": "Issued",
+  "5": "In Grace Period",
+  "6": "Late (16-30 days)",
+  "7": "Does not meet the credit policy. Status:Fully Paid",
+  "8": "Default",
+  "9": "Does not meet the credit policy. Status:Charged Off"
+}

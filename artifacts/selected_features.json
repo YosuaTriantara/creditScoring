@@ -1,0 +1,17 @@
+[
+  "inq_last_6mths",
+  "int_rate",
+  "total_rev_hi_lim",
+  "term",
+  "tot_cur_bal",
+  "loan_amnt",
+  "open_acc",
+  "dti",
+  "installment",
+  "revol_util",
+  "pub_rec",
+  "revol_bal",
+  "delinq_2yrs",
+  "annual_inc",
+  "emp_length"
+]
