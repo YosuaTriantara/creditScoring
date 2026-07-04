@@ -1,8 +1,3 @@
-"""
-src/model.py — disalin dari 03_Modeling_ANN.ipynb.
-Lihat notebook tersebut untuk penjelasan lengkap tiap eksperimen.
-"""
-
 from tensorflow import keras
 from tensorflow.keras import layers
 
