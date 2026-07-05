@@ -1,7 +1,3 @@
-"""
-src/model_v2.py — daftar eksperimen untuk pipeline 34 fitur (jalur 'b').
-Arsitektur ANN tetap reuse dari model.build_ann_model (TIDAK diduplikasi).
-"""
 
 EXPERIMENTS_V2 = {
     'E1': {'description': 'Baseline ANN (34 fitur)',                  'use_dropout': False, 'use_batchnorm': False, 'use_class_weight': False, 'use_smote': False},
