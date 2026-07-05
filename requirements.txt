@@ -6,3 +6,4 @@ scikit-learn==1.9.0
 joblib>=1.4
 shap>=0.46
 numpy>=1.26
+typing_extensions>=4.10

@@ -9,6 +9,7 @@ import shap
 import tensorflow as tf
 
 from app import config
+from app import preprocessing
 
 logger = logging.getLogger("inference")
 
@@ -33,6 +34,9 @@ class InferenceEngine:
         with open(config.BEST_MODEL_INFO_PATH) as f:
             self.best_model_info = json.load(f)
 
+        with open(config.SUB_GRADE_MAPPING_PATH) as f:
+            self.sub_grade_map = json.load(f)
+
         # Validasi urutan fitur scaler == selected_features (harus identik)
         scaler_features = list(getattr(self.scaler, "feature_names_in_", self.selected_features))
         if scaler_features != self.selected_features:
@@ -41,6 +45,7 @@ class InferenceEngine:
                 "Periksa kembali kecocokan artifact."
             )
 
+        # Median training per fitur (untuk isi nilai kosong / imputasi)
         imputer_features = list(self.imputer.feature_names_in_)
         stats = dict(zip(imputer_features, self.imputer.statistics_))
         missing = [f for f in self.selected_features if f not in stats]
@@ -57,8 +62,16 @@ class InferenceEngine:
             self.n_features, self.n_classes, self.best_model_info.get("best_exp_id"),
         )
 
+    # ------------------------------------------------------------------
     # Preprocessing
+    # ------------------------------------------------------------------
     def build_feature_vector(self, payload: dict):
+        """
+        Ubah dict input (bisa mengandung None) menjadi array numpy (1, n_features)
+        sesuai urutan selected_features, dengan nilai kosong diisi median training.
+
+        Returns: (raw_vector: np.ndarray shape (1, n_features), imputed_fields: list[str])
+        """
         imputed_fields = []
         values = []
         for feat in self.selected_features:
@@ -74,7 +87,9 @@ class InferenceEngine:
         raw_df = pd.DataFrame(raw_vector, columns=self.selected_features)
         return self.scaler.transform(raw_df)
 
+    # ------------------------------------------------------------------
     # Prediksi
+    # ------------------------------------------------------------------
     def predict_proba(self, raw_vector: np.ndarray) -> np.ndarray:
         scaled = self.scale(raw_vector)
         proba = self.model.predict(scaled, verbose=0)
@@ -94,7 +109,9 @@ class InferenceEngine:
             "imputed_fields": imputed_fields,
         }
 
+    # ------------------------------------------------------------------
     # SHAP explainability
+    # ------------------------------------------------------------------
     def _predict_fn_raw_space(self, x: np.ndarray) -> np.ndarray:
         """predict_fn yang menerima input dalam skala ASLI (belum di-scale),
         melakukan scaling internal, lalu mengembalikan probabilitas model.
@@ -114,6 +131,8 @@ class InferenceEngine:
         n = config.SHAP_BACKGROUND_SIZE
         samples = rng.normal(loc=mean, scale=std, size=(n, len(mean)))
 
+        # Clip fitur biner (one-hot / ordinal encoded 0/1) supaya background
+        # tetap masuk akal (tidak generate nilai negatif utk fitur non-negatif)
         non_negative_like = [
             i for i, f in enumerate(self.selected_features)
             if f.startswith(("home_ownership_", "purpose_"))
@@ -149,6 +168,7 @@ class InferenceEngine:
         explainer = self._get_explainer()
         shap_values = explainer(raw_vector)
 
+        # shap_values.values shape: (1, n_features, n_classes) untuk output multi-kelas
         values = shap_values.values[0]
         if values.ndim == 2:
             class_values = values[:, pred_class]
@@ -175,6 +195,22 @@ class InferenceEngine:
             "imputed_fields": imputed_fields,
         }
 
+    # ------------------------------------------------------------------
+    # Entry point untuk input MENTAH (raw loan application fields)
+    # ------------------------------------------------------------------
+    def encode_raw(self, raw_payload: dict) -> dict:
+        """Transformasi field mentah -> 34 fitur ter-encode, mereplikasi
+        logika notebook 01b/02b (lihat app/preprocessing.py)."""
+        return preprocessing.transform_raw_to_encoded(raw_payload, self.sub_grade_map)
+
+    def predict_from_raw(self, raw_payload: dict):
+        encoded = self.encode_raw(raw_payload)
+        return self.predict(encoded)
+
+    def explain_from_raw(self, raw_payload: dict):
+        encoded = self.encode_raw(raw_payload)
+        return self.explain(encoded)
+
     def model_info(self):
         return {
             "best_experiment_id": self.best_model_info.get("best_exp_id"),
@@ -186,7 +222,9 @@ class InferenceEngine:
         }
 
 
+# Singleton instance, dimuat sekali saat modul pertama kali diimpor (startup app)
 engine: InferenceEngine | None = None
+
 
 def get_engine() -> InferenceEngine:
     global engine
