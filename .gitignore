@@ -1,4 +1,8 @@
-__pycache__
-/data
-/models
-/reports
+__pycache__/
+*.pyc
+venv/
+.env
+models/
+reports/
+artifacts/
+data/
